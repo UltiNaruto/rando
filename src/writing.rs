@@ -1,6 +1,9 @@
+use std::path::PathBuf;
+use egui_modal::Modal;
 use super::logic::*;
-use crate::{io::*, map::*};
+use crate::{get_pak_str, io::*, map::*, viewer, Hints};
 use unreal_asset::{exports::*, properties::*};
+use crate::config::PatchConfig;
 
 mod music;
 mod overworld;
@@ -44,6 +47,60 @@ fn extract(
             &mut app.pak()?,
         )?,
     )
+}
+
+pub fn write_from_config(
+    config: PatchConfig,
+    path: PathBuf,
+) -> Result<(), Error> {
+    let pak = path.join("pseudoregalia/Content/Paks")
+        .exists()
+        .then(|| path.join("pseudoregalia\\Content\\Paks"))
+        .unwrap();
+    let pak_str = get_pak_str(&pak);
+
+    let app = crate::Rando {
+        // pak file path
+        pak,
+        pak_str,
+        // dummy modals
+        credits: Modal::new(&Default::default(), "credits"),
+        faq: Modal::new(&Default::default(), "faq"),
+        notifs: Modal::new(&Default::default(), "notifs"),
+        tricks: Modal::new(&Default::default(), "tricks"),
+        viewer: Modal::new(&Default::default(), "viewer"),
+        // options
+        music: false,
+        progressive_breaker: config.progressive_breaker,
+        progressive_slide: config.progressive_slide,
+        split_cling: false,
+        split_greaves: config.split_kick,
+        hints: Hints::Description,
+        // shuffled locations
+        abilities: true,
+        aspects: true,
+        big_keys: true,
+        chairs: false,
+        goatlings: false,
+        health: true,
+        outfits: true,
+        notes: false,
+        small_keys: true,
+        spawn: config.starting_room.0 != "gameStart",
+        // tricks but unused,
+        cling_abuse: Difficulty::Disabled,
+        knowledge: Difficulty::Disabled,
+        momentum: Difficulty::Disabled,
+        movement: Difficulty::Disabled,
+        one_wall: Difficulty::Disabled,
+        pogo_abuse: Difficulty::Disabled,
+        reverse_kick: Difficulty::Disabled,
+        sunsetter_abuse: Difficulty::Disabled,
+        // unused
+        selected: viewer::Node::Location(Location::EarlyPrison),
+        area: viewer::Area::Dungeon,
+    };
+    write(config.starting_room, config.checks.clone(), &config.major_key_hints, None, &app)
 }
 
 pub fn write(
@@ -180,7 +237,7 @@ pub fn write(
             bulk.into_inner(),
         )?;
     }
-    if app.progressive {
+    if app.progressive_breaker || app.progressive_slide {
         mod_pak.write_file(
             "pseudoregalia/Content/Blueprints/Progressive.uasset",
             include_bytes!("assets/Progressive.uasset"),

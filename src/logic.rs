@@ -1,4 +1,6 @@
 mod drop;
+
+use serde::Serialize;
 pub use drop::*;
 mod checks;
 pub use checks::CHECKS;
@@ -13,7 +15,7 @@ pub use tricks::*;
 mod music;
 pub use music::*;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize)]
 pub enum Drop {
     Ability(Ability),
     SmallKey,
@@ -38,7 +40,7 @@ impl std::fmt::Debug for Drop {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize)]
 pub struct Check {
     pub description: &'static str,
     pub location: Location,
@@ -59,7 +61,7 @@ impl std::fmt::Debug for Check {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum Lock {
     None,
     Any(&'static [Lock]),

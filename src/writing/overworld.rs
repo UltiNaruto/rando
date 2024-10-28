@@ -105,23 +105,34 @@ pub fn write(
                                     match ability {
                                         Ability::ClingGem(_) if app.split_cling => 59,
                                         Ability::DreamBreaker
-                                        | Ability::SunGreaves
-                                        | Ability::Slide
-                                        | Ability::Sunsetter
-                                        | Ability::ClingGem(_)
-                                        | Ability::AscendantLight
-                                        | Ability::SoulCutter
-                                        | Ability::Indignation
-                                        | Ability::SolarWind
-                                        | Ability::Strikebreak => match app.progressive {
+                                        | Ability::Strikebreak
+                                        | Ability::SoulCutter => match app.progressive_breaker {
                                             true => 46,
                                             false => 5,
+                                        },
+                                        Ability::Slide
+                                        | Ability::SolarWind => match app.progressive_slide {
+                                            true => 46,
+                                            false => 5,
+                                        },
+                                        Ability::AscendantLight
+                                        | Ability::ClingGem(_)
+                                        | Ability::Indignation
+                                        | Ability::SunGreaves
+                                        | Ability::Sunsetter => 5,
+                                        Ability::OffworldItem(major, _, _) => if *major {
+                                            5
+                                        } else {
+                                            30
                                         },
                                         _ => 30,
                                     },
                                     false,
                                 )?;
-                                let ability_name = map.add_fname(ability.as_ref());
+                                let ability_name = map.add_fname(match ability {
+                                    Ability::OffworldItem(_, idx, _) => format!("{}{}", ability, idx),
+                                    _ => format!("{}", ability),
+                                }.as_str());
                                 let mut names = map.get_name_map();
                                 let Some(norm) = map.asset_data.exports[index].get_normal_export_mut() else {
                                     continue;

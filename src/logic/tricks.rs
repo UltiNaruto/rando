@@ -1,4 +1,6 @@
-#[derive(Copy, Clone, Debug, PartialEq)]
+use serde::Serialize;
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
 pub enum Trick {
     Momentum,       // Momentum conservation
     OneWall,        // Single Wall wall-kicks
@@ -22,6 +24,7 @@ pub enum Trick {
     Debug,
     PartialEq,
     PartialOrd,
+    Serialize,
 )]
 pub enum Difficulty {
     #[default]

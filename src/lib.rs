@@ -1,10 +1,11 @@
 use eframe::egui;
 
+pub mod config;
 mod io;
 mod logic;
 mod map;
 mod viewer;
-mod writing;
+pub mod writing;
 
 type Asset<T> = unreal_asset::Asset<std::io::Cursor<T>>;
 
@@ -31,7 +32,8 @@ pub struct Rando {
     big_keys: bool,
     health: bool,
     split_greaves: bool,
-    progressive: bool,
+    progressive_breaker: bool,
+    progressive_slide: bool,
     goatlings: bool,
     notes: bool,
     chairs: bool,
@@ -118,7 +120,8 @@ impl Rando {
             big_keys: get_bool("big keys"),
             health: get_bool("health"),
             split_greaves: get_bool("split greaves"),
-            progressive: get_bool("progressive"),
+            progressive_breaker: get_bool("progressive") || get_bool("progressive_breaker"),
+            progressive_slide: get_bool("progressive") || get_bool("progressive_slide"),
             goatlings: get_bool("goatlings"),
             notes: get_bool("notes"),
             chairs: get_bool("chairs"),
@@ -274,7 +277,8 @@ impl eframe::App for Rando {
                 if ui[0].checkbox(&mut self.abilities, "Abilities").changed() && !self.abilities {
                     self.split_greaves = false;
                     self.split_cling = false;
-                    self.progressive = false;
+                    self.progressive_breaker = false;
+                    self.progressive_slide = false;
                 }
                 ui[0].checkbox(&mut self.aspects, "Aspects");
                 ui[0].checkbox(&mut self.small_keys, "Small keys");
@@ -317,7 +321,11 @@ impl eframe::App for Rando {
                 );
                 ui[3].add_enabled(
                     self.abilities,
-                    egui::Checkbox::new(&mut self.progressive, "Progressive items"),
+                    egui::Checkbox::new(&mut self.progressive_breaker, "Progressive Dream Breaker"),
+                );
+                ui[3].add_enabled(
+                    self.abilities,
+                    egui::Checkbox::new(&mut self.progressive_slide, "Progressive Slide"),
                 );
                 ui[3].add_enabled(false, egui::Checkbox::new(&mut false, "Transitions?"));
             });
@@ -531,7 +539,8 @@ impl eframe::App for Rando {
         set_bool("big keys", self.big_keys);
         set_bool("health", self.health);
         set_bool("split greaves", self.split_greaves);
-        set_bool("progressive", self.progressive);
+        set_bool("progressive_breaker", self.progressive_breaker);
+        set_bool("progressive_slide", self.progressive_slide);
         set_bool("goatlings", self.goatlings);
         set_bool("notes", self.notes);
         set_bool("chairs", self.chairs);

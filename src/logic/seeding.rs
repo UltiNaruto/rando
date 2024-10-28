@@ -54,7 +54,7 @@ fn accessible(
                 _ => [].as_slice(),
             };
             match ability {
-                Ability::Slide if app.progressive => obtainable.iter().chain(case).any(|drop| {
+                Ability::Slide if app.progressive_slide => obtainable.iter().chain(case).any(|drop| {
                     matches!(
                         drop,
                         Drop::Ability(Ability::Slide) | Drop::Ability(Ability::SolarWind)
@@ -73,7 +73,7 @@ fn accessible(
                         .count()
                         == 2
                 }
-                Ability::DreamBreaker if app.progressive => {
+                Ability::DreamBreaker if app.progressive_breaker => {
                     obtainable.iter().chain(case).any(|drop| {
                         matches!(
                             drop,
@@ -83,7 +83,7 @@ fn accessible(
                         )
                     })
                 }
-                Ability::Strikebreak if app.progressive => {
+                Ability::Strikebreak if app.progressive_breaker => {
                     obtainable
                         .iter()
                         .chain(case)
@@ -275,6 +275,8 @@ pub fn randomise(app: &crate::Rando) -> Result<(), String> {
             | Ability::SolSister
             | Ability::Classy
             | Ability::Sleepytime => app.outfits,
+            Ability::Nothing => true,
+            Ability::OffworldItem(..) => panic!("Not supported by standalone randomizer!"),
         },
         Drop::SmallKey => app.small_keys,
         Drop::BigKey(_) => app.big_keys,

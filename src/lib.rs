@@ -1,4 +1,6 @@
+use std::path::PathBuf;
 use eframe::egui;
+use crate::config::PatchConfig;
 
 pub mod config;
 mod io;
@@ -559,4 +561,11 @@ impl eframe::App for Rando {
         set_difficulty("cling abuse", self.cling_abuse);
         set_difficulty("knowledge", self.knowledge);
     }
+}
+
+pub fn patch_from_config(json: &String, game_path: PathBuf) -> Result<(), String> {
+    let config = PatchConfig::from_json((*json).as_str())?;
+
+    writing::write_from_config(config, game_path)
+        .map_err(|e| e.to_string())
 }

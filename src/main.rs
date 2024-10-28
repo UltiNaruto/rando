@@ -4,8 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use clap::Parser;
-use pseudoregalia_rando::config::PatchConfig;
-use pseudoregalia_rando::{writing, Rando};
+use pseudoregalia_rando::{patch_from_config, Rando};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -17,13 +16,6 @@ struct Args {
     /// Path to game
     #[arg(short, long)]
     game_path: String,
-}
-
-pub fn patch_from_config(json: &String, game_path: PathBuf) -> Result<(), String> {
-    let config = PatchConfig::from_json((*json).as_str())?;
-
-    writing::write_from_config(config, game_path)
-            .map_err(|e| e.to_string())
 }
 
 fn main() -> Result<(), String> {

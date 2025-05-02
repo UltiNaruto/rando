@@ -1,3 +1,4 @@
+use serde::Serialize;
 use super::*;
 /*
 To-Do:
@@ -6,7 +7,7 @@ Add Nodes for each lever.
 Re-name current nodes.
 i.e. split Late prison into the save crystal's, In the rafters room, and after the underbelly wall.
 */
-#[derive(Debug, Clone, Copy, PartialEq, strum::EnumIter, strum::EnumCount, strum::Display)]
+#[derive(Debug, Clone, Copy, PartialEq, strum::EnumIter, strum::EnumCount, strum::Display, Serialize)]
 pub enum Location {
     // Prison
     EarlyPrison,

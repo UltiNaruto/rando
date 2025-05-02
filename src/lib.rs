@@ -1,5 +1,8 @@
+use std::path::PathBuf;
 use eframe::egui;
+use crate::config::PatchConfig;
 
+pub mod config;
 mod io;
 mod logic;
 mod map;
@@ -22,7 +25,7 @@ pub struct Rando {
     faq: egui_modal::Modal,
     tricks: egui_modal::Modal,
     viewer: egui_modal::Modal,
-    pak: std::path::PathBuf,
+    pak: PathBuf,
     pak_str: String,
     abilities: bool,
     aspects: bool,
@@ -153,7 +156,7 @@ impl Rando {
     }
 }
 
-fn ask_game_path() -> Option<std::path::PathBuf> {
+fn ask_game_path() -> Option<PathBuf> {
     let path = rfd::FileDialog::new()
         .set_title("Select where you have pseudoregalia installed (e.g C:/Program Files (x86)/Steam/steamapps/common/pseudoregalia)")
         .pick_folder()?;
@@ -197,7 +200,7 @@ macro_rules! notify {
 }
 
 impl eframe::App for Rando {
-    fn update(&mut self, ctx: &eframe::egui::Context, _s: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _s: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.heading(egui::RichText::new("pseudoregalia rando").size(40.0));
@@ -554,4 +557,11 @@ impl eframe::App for Rando {
         set_difficulty("cling abuse", self.cling_abuse);
         set_difficulty("knowledge", self.knowledge);
     }
+}
+
+pub fn patch_from_config(json: &String, game_path: PathBuf) -> Result<(), String> {
+    let config = PatchConfig::from_json((*json).as_str())?;
+
+    writing::write_from_config(config, game_path)
+        .map_err(|e| e.to_string())
 }

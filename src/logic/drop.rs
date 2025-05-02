@@ -1,4 +1,4 @@
-#[derive(PartialEq, Clone, Copy, strum::AsRefStr)]
+#[derive(PartialEq, Clone, Copy, strum::AsRefStr, Serialize)]
 pub enum Ability {
     #[strum(serialize = "attack")]
     DreamBreaker,
@@ -52,6 +52,11 @@ pub enum Ability {
     Classy,
     #[strum(serialize = "outfitSweater")]
     Sleepytime,
+
+    #[strum(serialize = "nothing")]
+    Nothing,
+    #[strum(serialize = "offworldItem")]
+    OffworldItem(bool, usize, Option<&'static String>),
 }
 
 impl std::fmt::Debug for Ability {
@@ -83,14 +88,59 @@ impl std::fmt::Debug for Ability {
             A::SolSister => f.write_str("Sol Sister"),
             A::Classy => f.write_str("Classy"),
             A::Sleepytime => f.write_str("Sleepytime"),
+            A::Nothing => f.write_str("Nothing"),
+            A::OffworldItem(_, idx, _) => f.write_str(format!("Offworld Item (ID: {})", idx).as_str()),
         }
     }
 }
 
+use serde::Serialize;
 use unreal_asset::types::PackageIndex;
 use Ability as A;
 
 impl Ability {
+    pub fn from_name<'a>(name: &str, count: Option<u8>) -> Self
+    {
+        match name {
+            "Dream Breaker"             => A::DreamBreaker,
+            "Strikebreak"               => A::Strikebreak,
+            "Soul Cutter"               => A::SoulCutter,
+            "Progressive Dream Breaker" => A::DreamBreaker,
+
+            "Sun Greaves"               => A::SunGreaves,
+            "Air Kick"                  => A::HeliacalPower,
+            "Heliacal Power"            => A::HeliacalPower,
+
+            "Slide"                     => A::Slide,
+            "Solar Wind"                => A::SolarWind,
+            "Progressive Slide"         => A::Slide,
+
+            "Sunsetter"                 => A::Sunsetter,
+            "Cling Gem"                 => A::ClingGem(count.unwrap_or(6)),
+            "Ascendant Light"           => A::AscendantLight,
+            "Indignation"               => A::Indignation,
+            "Memento"                   => A::Memento,
+            "Aerial Finesse"            => A::AerialFinesse,
+            "Pilgrimage"                => A::Pilgrimage,
+            "Empathy"                   => A::Empathy,
+            "Good Graces"               => A::GoodGraces,
+            "Martial Prowess"           => A::MartialProwess,
+            "Clear Mind"                => A::ClearMind,
+            "Professional"              => A::Professional,
+            "Guardian"                  => A::Guardian,
+            "Soldier"                   => A::Soldier,
+            "Bleeding Heart"            => A::BleedingHeart,
+            "XIX"                       => A::Xix,
+            "Sol Sister"                => A::SolSister,
+            "Classy"                    => A::Classy,
+            "Sleepytime"                => A::Sleepytime,
+
+            "Nothing"                   => A::Nothing,
+            "Offworld Item"             => panic!("Offworld items are manually instantiated!"),
+            _                           => panic!("Unknown Ability: {}", name),
+        }
+    }
+
     pub fn data(
         &self,
         mut names: std::cell::RefMut<unreal_asset::containers::NameMap>,
@@ -229,6 +279,8 @@ impl Ability {
                             A::SolSister => "Devotion",
                             A::Classy => "Class",
                             A::Sleepytime => "Sweater",
+                            A::Nothing => "Nothing",
+                            A::OffworldItem(..) => "Offworld Item",
                         }),
                         None
                 )),
@@ -276,6 +328,11 @@ impl Ability {
                         A::GoodGraces => "Increases healing power by 1/2 pip",
                         A::MartialProwess => "Increases Damage dealt",
                         A::ClearMind => "Collect all 3 to hold more magical power",
+                        A::Nothing => "No item acquired",
+                        A::OffworldItem(_, _, description) => match *description {
+                            Some(d) => d.as_str(),
+                            None => "Sent an offworld item",
+                        },
                         _ => "Gained a new outfit!",
                     }),
                     None
@@ -409,7 +466,9 @@ Activation is easier when you move along walls, not directly into them.
                         | A::Xix
                         | A::SolSister
                         | A::Classy
-                        | A::Sleepytime => 0,
+                        | A::Sleepytime
+                        | A::Nothing
+                        | A::OffworldItem(..) => 0,
                         _ => insert
                     }),
                     ..Default::default()

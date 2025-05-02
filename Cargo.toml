@@ -16,6 +16,9 @@ rand = "0.8"
 egui-modal = "0.3"
 rfd = "0.11"
 thiserror = "1.0"
+serde = { version = "1.0.213", features = ["derive"] }
+serde_json = "1.0.140"
+clap = { version = "4.5.37", features = ["derive"] }
 
 [build-dependencies]
 winres = "0.1"

@@ -278,6 +278,8 @@ pub fn randomise(app: &crate::Rando) -> Result<(), String> {
             | Ability::SolSister
             | Ability::Classy
             | Ability::Sleepytime => app.outfits,
+            Ability::Nothing => true,
+            Ability::OffworldItem(..) => panic!("Not supported by standalone randomizer!"),
         },
         Drop::SmallKey => app.small_keys,
         Drop::BigKey(_) => app.big_keys,

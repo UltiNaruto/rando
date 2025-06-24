@@ -38,6 +38,7 @@ pub struct Rando {
     split_cling: bool,
     spawn: bool,
     music: bool,
+    logic: bool,
     hints: Hints,
     momentum: logic::Difficulty,
     one_wall: logic::Difficulty,
@@ -125,6 +126,7 @@ impl Rando {
             split_cling: get_bool("split cling"),
             spawn: get_bool("spawn"),
             music: get_bool("music"),
+            logic: get_bool("logic"),
             hints: {
                 use std::str::FromStr;
                 Hints::from_str(
@@ -320,6 +322,7 @@ impl eframe::App for Rando {
                     egui::Checkbox::new(&mut self.progressive, "Progressive items"),
                 );
                 ui[3].add_enabled(false, egui::Checkbox::new(&mut false, "Transitions?"));
+                ui[3].checkbox(&mut self.logic, "Logic");
             });
             ui.vertical_centered_justified(|ui| {
                 if ui
@@ -538,6 +541,7 @@ impl eframe::App for Rando {
         set_bool("split cling", self.split_cling);
         set_bool("spawn", self.spawn);
         set_bool("music", self.music);
+        set_bool("logic", self.logic);
         storage.set_string("hints", self.hints.to_string());
         let mut set_difficulty =
             |key: &str, value: logic::Difficulty| storage.set_string(key, value.to_string());

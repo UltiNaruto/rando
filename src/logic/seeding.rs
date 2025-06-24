@@ -8,6 +8,9 @@ fn accessible(
     app: &crate::Rando,
     ctx: Option<(usize, &Drop)>,
 ) -> bool {
+    if !app.logic {
+        return true;
+    }
     match locks {
         Lock::None => true,
         Lock::Trick(trick, diff) => match trick {

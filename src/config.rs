@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
-use crate::logic::{Ability as A, Drop as D, Check, Location, SPAWNS, CHECKS};
-use crate::logic::Lock::Any;
+use crate::logic::{Ability as A, Drop as D, Check, Location, SPAWNS, CHECKS, Music as M};
 
 const MAJOR_KEYS: [&'static str; 5] = [
     "Major Key - Empty Bailey",
@@ -29,12 +29,17 @@ fn internal_name_from_level_name(level_name: &str) -> &'static str
 
 #[derive(Debug, Serialize)]
 pub struct PatchConfig {
+    pub game_path: PathBuf,
     pub starting_room: (&'static str, Location),
 
     pub split_kick: bool,
     pub split_cling: bool,
+    pub progressive_dream_breaker: bool,
+    pub progressive_slide: bool,
 
     pub major_key_hints: [String; 5],
+
+    pub music: HashMap<M, M>,
 
     pub checks: BTreeMap<&'static str, Vec<Check>>,
 }
@@ -46,8 +51,16 @@ pub struct GameConfig {
 
     pub split_kick: Option<bool>,
     pub split_cling: Option<bool>,
+    pub progressive_dream_breaker: Option<bool>,
+    pub progressive_slide: Option<bool>,
 
     pub major_key_hints: HashMap<String, String>,
+}
+
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Preferences {
+    pub music: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
@@ -79,6 +92,9 @@ struct PatchConfigPrivate {
     game_config: GameConfig,
 
     #[serde(default)]
+    preferences: Preferences,
+
+    #[serde(default)]
     level_data: HashMap<String, LevelData>,
 }
 
@@ -90,7 +106,7 @@ impl PatchConfigPrivate {
 }
 
 impl PatchConfig {
-    pub fn from_json<'a>(json: &str) -> Result<Self, String>
+    pub fn from_json<'a>(json: &str, game_path: PathBuf) -> Result<Self, String>
     {
         let cfg = Box::leak(Box::new(PatchConfigPrivate::from_json(json)?));
 
@@ -108,40 +124,63 @@ impl PatchConfig {
             }
         }
 
+        // filling music hash map
+        let mut music = HashMap::new();
+        for (track_src, track_dst) in cfg.preferences.music.iter() {
+            music.insert(
+                M::from_track(track_src),
+                M::from_track(track_dst),
+            );
+        }
+
         let mut checks: BTreeMap<&'static str, Vec<Check>> = BTreeMap::new();
         for (level_name, level_data) in cfg.level_data.iter() {
             let mut level_checks: Vec<Check> = Vec::new();
             for pickup_cfg in level_data.pickups.iter() {
-                let mut check = if pickup_cfg.index >= 92 {
-                    match pickup_cfg.index {
-                        92 => Check {
-                            description: "where sun greaves normally is",
-                            location: Location::MainLibrary,
-                            index: 1679,
-                            drop: D::Ability(A::HeliacalPower),
-                            trial: None,
-                            locks: Any(&[]),
-                        },
-                        93 => Check {
-                            description: "where sun greaves normally is",
-                            location: Location::MainLibrary,
-                            index: 1685,
-                            drop: D::Ability(A::HeliacalPower),
-                            trial: None,
-                            locks: Any(&[]),
-                        },
-                        94 => Check {
-                            description: "where sun greaves normally is",
-                            location: Location::MainLibrary,
-                            index: 1691,
-                            drop: D::Ability(A::HeliacalPower),
-                            trial: None,
-                            locks: Any(&[]),
-                        },
-                        _ => continue,
-                    }
-                } else {
-                    CHECKS[pickup_cfg.index].clone()
+                let mut check = match pickup_cfg.index {
+                    92 => Check {
+                        description: "where sun greaves normally is",
+                        location: Location::MainLibrary,
+                        index: 1679,
+                        drop: D::Ability(A::HeliacalPower),
+                        trial: None,
+                    },
+                    93 => Check {
+                        description: "where sun greaves normally is",
+                        location: Location::MainLibrary,
+                        index: 1685,
+                        drop: D::Ability(A::HeliacalPower),
+                        trial: None,
+                    },
+                    94 => Check {
+                        description: "where sun greaves normally is",
+                        location: Location::MainLibrary,
+                        index: 1691,
+                        drop: D::Ability(A::HeliacalPower),
+                        trial: None,
+                    },
+                    95 => Check {
+                        description: "where cling gem normally is",
+                        location: Location::TowerRuinsKeep,
+                        index: 853,
+                        drop: D::Ability(A::ClingGem(2)),
+                        trial: None,
+                    },
+                    96 => Check {
+                        description: "where cling gem normally is",
+                        location: Location::TowerRuinsKeep,
+                        index: 859,
+                        drop: D::Ability(A::ClingGem(2)),
+                        trial: None,
+                    },
+                    97 => Check {
+                        description: "where cling gem normally is",
+                        location: Location::TowerRuinsKeep,
+                        index: 865,
+                        drop: D::Ability(A::ClingGem(2)),
+                        trial: None,
+                    },
+                    _ => CHECKS[pickup_cfg.index].clone(),
                 };
 
                 // retrieve major key number from its name
@@ -167,11 +206,20 @@ impl PatchConfig {
         }
 
         Ok(Self {
+            game_path,
             starting_room,
             split_kick: cfg.game_config.split_kick.unwrap_or(false),
             split_cling: cfg.game_config.split_cling.unwrap_or(false),
+            progressive_dream_breaker: cfg.game_config.progressive_dream_breaker.unwrap_or(false),
+            progressive_slide: cfg.game_config.progressive_slide.unwrap_or(false),
             major_key_hints,
+            music,
             checks,
         })
+    }
+
+    pub fn pak(&self) -> Result<std::io::BufReader<std::fs::File>, std::io::Error> {
+        let pak = self.game_path.join("pseudoregalia/Content/Paks");
+        std::fs::File::open(pak.join("pseudoregalia-Windows.pak")).map(std::io::BufReader::new)
     }
 }

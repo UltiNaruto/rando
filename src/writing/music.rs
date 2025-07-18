@@ -3,17 +3,18 @@ use super::*;
 const PREFIX: &str = "Audio/Music/";
 
 pub fn write(
-    app: &crate::Rando,
-    music: std::iter::Zip<std::array::IntoIter<Music, 9>, std::array::IntoIter<Music, 9>>,
+    config: &PatchConfig,
     pak: &repak::PakReader,
     mod_pak: &mut repak::PakWriter<std::io::BufWriter<std::fs::File>>,
 ) -> Result<(), Error> {
+    let music = config.music.clone();
     std::thread::scope(|thread| -> Result<(), Error> {
         let threads: Vec<_> = music
+            .into_iter()
             .map(|(old, new)| {
                 thread.spawn(move || {
                     let mut path = PREFIX.to_string() + old.track() + ".uasset";
-                    let mut track = extract(app, pak, &path)?;
+                    let mut track = extract(config, pak, &path)?;
                     path = MOD.to_string() + &path;
                     let mut name_map = track.get_name_map();
                     let matched: Vec<_> = name_map

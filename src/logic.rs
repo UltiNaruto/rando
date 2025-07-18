@@ -4,14 +4,10 @@ use serde::Serialize;
 pub use drop::*;
 mod checks;
 pub use checks::CHECKS;
-mod seeding;
-pub use seeding::randomise;
 mod locations;
 pub use locations::Location;
 mod spawns;
 pub use spawns::SPAWNS;
-mod tricks;
-pub use tricks::*;
 mod music;
 pub use music::*;
 
@@ -47,7 +43,6 @@ pub struct Check {
     pub index: usize,
     pub drop: Drop,
     pub trial: Option<usize>,
-    pub locks: Lock,
 }
 
 impl std::fmt::Debug for Check {
@@ -59,16 +54,4 @@ impl std::fmt::Debug for Check {
             self.location.name(),
         ))
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub enum Lock {
-    None,
-    Any(&'static [Lock]),
-    All(&'static [Lock]),
-    Trick(Trick, Difficulty),
-    Location(Location),
-    Movement(Ability),
-    SmallKey,
-    Ending,
 }

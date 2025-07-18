@@ -1,7 +1,5 @@
-use std::path::PathBuf;
-use egui_modal::Modal;
 use super::logic::*;
-use crate::{get_pak_str, Hints, io::*, map::*, viewer};
+use crate::{io::*, map::*};
 use unreal_asset::{exports::*, properties::*};
 use crate::config::PatchConfig;
 
@@ -33,83 +31,30 @@ impl From<Box<dyn std::any::Any + Send + 'static>> for Error {
 pub const MOD: &str = "pseudoregalia/Content/";
 
 fn extract(
-    app: &crate::Rando,
+    config: &PatchConfig,
     pak: &repak::PakReader,
     path: &str,
 ) -> Result<super::Asset<Vec<u8>>, Error> {
     open(
-        pak.get(&format!("pseudoregalia/Content/{path}"), &mut app.pak()?)?,
+        pak.get(&format!("pseudoregalia/Content/{path}"), &mut config.pak()?)?,
         pak.get(
             &format!(
                 "pseudoregalia/Content/{}",
                 path.replace(".uasset", ".uexp").replace(".umap", ".uexp")
             ),
-            &mut app.pak()?,
+            &mut config.pak()?,
         )?,
     )
 }
 
 pub fn write_from_config(
     config: PatchConfig,
-    path: PathBuf,
 ) -> Result<(), Error> {
-    let pak = path.join("pseudoregalia/Content/Paks")
+    let pak_path = config.game_path.join("pseudoregalia/Content/Paks")
         .exists()
-        .then(|| path.join("pseudoregalia\\Content\\Paks"))
+        .then(|| config.game_path.join("pseudoregalia\\Content\\Paks"))
         .unwrap();
-    let pak_str = get_pak_str(&pak);
-
-    let app = crate::Rando {
-        // pak file path
-        pak,
-        pak_str,
-        // dummy modals
-        credits: Modal::new(&Default::default(), "credits"),
-        faq: Modal::new(&Default::default(), "faq"),
-        notifs: Modal::new(&Default::default(), "notifs"),
-        tricks: Modal::new(&Default::default(), "tricks"),
-        viewer: Modal::new(&Default::default(), "viewer"),
-        // options
-        music: false,
-        split_cling: false,
-        split_greaves: config.split_kick,
-        progressive: false,
-        hints: Hints::Description,
-        // shuffled locations
-        abilities: true,
-        aspects: true,
-        big_keys: true,
-        chairs: false,
-        goatlings: false,
-        health: true,
-        outfits: true,
-        notes: false,
-        small_keys: true,
-        spawn: config.starting_room.0 != "gameStart",
-        // tricks but unused,
-        cling_abuse: Difficulty::Disabled,
-        knowledge: Difficulty::Disabled,
-        momentum: Difficulty::Disabled,
-        movement: Difficulty::Disabled,
-        one_wall: Difficulty::Disabled,
-        pogo_abuse: Difficulty::Disabled,
-        reverse_kick: Difficulty::Disabled,
-        sunsetter_abuse: Difficulty::Disabled,
-        // unused
-        selected: viewer::Node::Location(Location::EarlyPrison),
-        area: viewer::Area::Dungeon,
-    };
-    write(config.starting_room, config.checks.clone(), &config.major_key_hints, None, &app)
-}
-
-pub fn write(
-    (tag, spawn): (&'static str, Location),
-    checks: std::collections::BTreeMap<&'static str, Vec<Check>>,
-    hints: &[String; 5],
-    music: Option<std::iter::Zip<std::array::IntoIter<Music, 9>, std::array::IntoIter<Music, 9>>>,
-    app: &crate::Rando,
-) -> Result<(), Error> {
-    let mut sync = app.pak()?;
+    let mut sync = config.pak()?;
     let pak = repak::PakBuilder::new()
         .oodle(|| {
             Ok(|comp_buf, raw_buf| unsafe {
@@ -136,18 +81,16 @@ pub fn write(
         // for some reason it's not loading properly with compression
         .compression([repak::Compression::Zlib])
         .writer(
-            std::io::BufWriter::new(std::fs::File::create(app.pak.join("rando_p.pak"))?),
+            std::io::BufWriter::new(std::fs::File::create(pak_path.join("rando_p.pak"))?),
             repak::Version::V10,
             "../../../".to_string(),
             None,
         );
-    overworld::write(checks, hints, app, &pak, &mut mod_pak)?;
-    if let Some(music) = music {
-        music::write(app, music, &pak, &mut mod_pak)?;
-    }
+    overworld::write(&config, &pak, &mut mod_pak)?;
+    music::write(&config, &pak, &mut mod_pak)?;
     let mut asset = std::io::Cursor::new(vec![]);
     let mut bulk = std::io::Cursor::new(vec![]);
-    let mut orig = extract(app, &pak, "Blueprints/LevelActors/BP_SavePoint.uasset")?;
+    let mut orig = extract(&config, &pak, "Blueprints/LevelActors/BP_SavePoint.uasset")?;
     orig.folder_name = "/Game/Blueprints/LevelActors/ORIG_SavePoint".into();
     let len = orig
         .get_name_map()
@@ -177,8 +120,9 @@ pub fn write(
         "pseudoregalia/Content/Blueprints/LevelActors/BP_SavePoint.uexp",
         include_bytes!("assets/BP_SavePoint.uexp"),
     )?;
-    if app.spawn {
-        let mut savegame = extract(app, &pak, "Blueprints/GameData/MVMain_Save.uasset")?;
+    if config.starting_room.0 != "gameStart" {
+        let (tag, spawn) = config.starting_room;
+        let mut savegame = extract(&config, &pak, "Blueprints/GameData/MVMain_Save.uasset")?;
         if let Some(default) = savegame.asset_data.exports[1].get_normal_export_mut() {
             for prop in default
                 .properties
@@ -236,7 +180,7 @@ pub fn write(
             bulk.into_inner(),
         )?;
     }
-    if app.progressive {
+    if config.progressive_dream_breaker || config.progressive_slide {
         mod_pak.write_file(
             "pseudoregalia/Content/Blueprints/Progressive.uasset",
             include_bytes!("assets/Progressive.uasset"),
@@ -246,7 +190,7 @@ pub fn write(
             include_bytes!("assets/Progressive.uexp"),
         )?;
     }
-    if app.split_cling {
+    if config.split_cling {
         mod_pak.write_file(
             "pseudoregalia/Content/Blueprints/SplitCling.uasset",
             include_bytes!("assets/SplitCling.uasset"),

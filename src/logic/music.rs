@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Debug, Clone, Eq, Hash, Serialize, PartialEq)]
 pub enum Music {
     DilapidatedDungeon,
     StrongEyes,
@@ -11,9 +11,25 @@ pub enum Music {
     Princess,
 }
 
+use serde::Serialize;
 use Music as M;
 
 impl Music {
+    pub fn from_track(track: &'static str) -> M {
+        match track {
+            "BGM_Dungeon" => M::DilapidatedDungeon,
+            "BGM_Boss1" => M::StrongEyes,
+            "BGM_LowerCastle" => M::CastleSansa,
+            "BGM_UpperCastle" => M::SansaKeep,
+            "BGM_Exterior" => M::EmptyBailey,
+            "BGM_Tower" => M::TowerRuins,
+            "BGM_Caves" => M::Underbelly,
+            "BGM_Theatre" => M::TwilightTheatre,
+            "BGM_BossPrincess" => M::Princess,
+            _ => panic!("Unknown Music {}!", track),
+        }
+    }
+
     pub const fn track(&self) -> &'static str {
         match self {
             M::DilapidatedDungeon => "BGM_Dungeon",

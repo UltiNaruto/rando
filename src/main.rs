@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use clap::Parser;
-use pseudoregalia_rando::{patch_from_config, Rando};
+use pseudoregalia_rando::patch_from_config;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -18,24 +18,16 @@ struct Args {
     game_path: String,
 }
 
+fn usage() -> Result<(), String>
+{
+    panic!("Usage: \
+         \tpseudoregalia-rando.exe --config-path <path to config file> --game-path <path to pseudoregalia.exe>")
+}
+
 fn main() -> Result<(), String> {
     let args = Args::try_parse();
     if args.is_err() {
-        eframe::run_native(
-            "",
-            eframe::NativeOptions {
-                // initial_window_size: Some(eframe::epaint::Vec2::new(420.0, 315.0)),
-                viewport: eframe::egui::ViewportBuilder::default()
-                    .with_icon(eframe::egui::IconData {
-                        rgba: include_bytes!("assets/sybil.rgba").to_vec(),
-                        width: 32,
-                        height: 32,
-                    })
-                    .with_app_id("pseudoregalia-rando"),
-                ..Default::default()
-            },
-            Box::new(|ctx| Box::new(Rando::new(ctx))),
-        ).map_err(|e| e.to_string())
+        usage()
     } else {
         let args_ = args.unwrap();
         let config_path: PathBuf = args_.config_path.into();

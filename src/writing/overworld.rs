@@ -5,18 +5,17 @@ use super::*;
 const PREFIX: &str = "Maps/";
 
 pub fn write(
-    checks: std::collections::BTreeMap<&'static str, Vec<Check>>,
-    hints: &[String; 5],
-    app: &crate::Rando,
+    config: &PatchConfig,
     pak: &repak::PakReader,
     mod_pak: &mut repak::PakWriter<std::io::BufWriter<std::fs::File>>,
 ) -> Result<(), Error> {
+    let checks = config.checks.clone();
     std::thread::scope(|thread| -> Result<(), Error> {
         let threads: Vec<_> = checks.into_iter().map(
             |(location, checks)| -> Result<std::thread::ScopedJoinHandle<Result<_, Error>>, Error> {
                 Ok(thread.spawn(move || {
                     let mut path = PREFIX.to_string() + location + ".umap";
-                    let mut map = extract(app, pak, &path)?;
+                    let mut map = extract(config, pak, &path)?;
                     path = MOD.to_string() + &path;
                     // unfortunately i can't share this between threads
                     let donor = open_slice(
@@ -25,7 +24,7 @@ pub fn write(
                     )?;
                     match location {
                         "ZONE_Dungeon" => transplant(36, &mut map, &donor)?,
-                        "Zone_Library" if app.split_greaves => {
+                        "Zone_Library" if config.split_kick => {
                             use unreal_asset::types::vector::Vector;
                             delete(324, &mut map);
                             let mut place = |location: Vector<f64>| -> Result<(), Error> {
@@ -39,7 +38,7 @@ pub fn write(
                             place(Vector::new(-3650.0, 9200.0, -250.0))?;
                         }
                         "Zone_Tower" => {
-                            if app.split_cling {
+                            if config.split_cling {
                                 use unreal_asset::types::vector::Vector;
                                 delete(155, &mut map);
                                 let mut place = |location: Vector<f64>| -> Result<(), Error> {
@@ -52,25 +51,23 @@ pub fn write(
                                 place(Vector::new(13350.0, 5250.0, 4150.0))?;
                                 place(Vector::new(13350.0, 4750.0, 4150.0))?;
                             }
-                            if !matches!(app.hints, crate::Hints::None) {
-                                for (i, hint) in hints.iter().enumerate() {
-                                    let Some(text) = map.asset_data.exports[i + 72]
-                                        .get_normal_export_mut()
-                                        .and_then(|norm| {
-                                            unreal_asset::cast!(
-                                                Property,
-                                                ArrayProperty,
-                                                &mut norm.properties[6]
-                                            )
-                                        })
-                                        .and_then(|arr| {
-                                            unreal_asset::cast!(Property, TextProperty, &mut arr.value[0])
-                                        })
-                                    else {
-                                        continue;
-                                    };
-                                    text.culture_invariant_string = Some(hint.clone())
-                                }
+                            for (i, hint) in config.major_key_hints.iter().enumerate() {
+                                let Some(text) = map.asset_data.exports[i + 72]
+                                    .get_normal_export_mut()
+                                    .and_then(|norm| {
+                                        unreal_asset::cast!(
+                                            Property,
+                                            ArrayProperty,
+                                            &mut norm.properties[6]
+                                        )
+                                    })
+                                    .and_then(|arr| {
+                                        unreal_asset::cast!(Property, TextProperty, &mut arr.value[0])
+                                    })
+                                else {
+                                    continue;
+                                };
+                                text.culture_invariant_string = Some(hint.clone())
                             }
                         }
                         _ => (),
@@ -103,20 +100,23 @@ pub fn write(
                             Drop::Ability(ability) => {
                                 replace(
                                     match ability {
-                                        Ability::ClingGem(_) if app.split_cling => 59,
+                                        Ability::ClingGem(_) if config.split_cling => 59,
                                         Ability::DreamBreaker
-                                        | Ability::SunGreaves
-                                        | Ability::Slide
-                                        | Ability::Sunsetter
-                                        | Ability::ClingGem(_)
-                                        | Ability::AscendantLight
-                                        | Ability::SoulCutter
-                                        | Ability::Indignation
-                                        | Ability::SolarWind
-                                        | Ability::Strikebreak => match app.progressive {
+                                        | Ability::Strikebreak
+                                        | Ability::SoulCutter => match config.progressive_dream_breaker {
                                             true => 46,
                                             false => 5,
                                         },
+                                        | Ability::Slide
+                                        | Ability::SolarWind => match config.progressive_slide {
+                                            true => 46,
+                                            false => 5,
+                                        },
+                                        | Ability::Sunsetter
+                                        | Ability::ClingGem(_)
+                                        | Ability::AscendantLight
+                                        | Ability::Indignation
+                                        | Ability::SunGreaves => 5,
                                         _ => 30,
                                     },
                                     false,
@@ -255,7 +255,7 @@ pub fn write(
                             }
                         }
                     }
-                    if app.split_cling {
+                    if config.split_cling {
                         transplant(65, &mut map, &donor)?;
                     }
                     map.rebuild_name_map();

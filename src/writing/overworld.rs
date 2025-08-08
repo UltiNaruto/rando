@@ -23,7 +23,6 @@ pub fn write(
                         include_bytes!("../assets/drops.uexp"),
                     )?;
                     match location {
-                        "ZONE_Dungeon" => transplant(36, &mut map, &donor)?,
                         "Zone_Library" if config.split_kick => {
                             use unreal_asset::types::vector::Vector;
                             delete(324, &mut map);
@@ -191,9 +190,6 @@ pub fn write(
                             }
                             Drop::Health if class != "BP_HealthPiece_C" => replace(11, false)?,
                             Drop::Goatling(dialogue) => {
-                                if class != "BP_NPC" {
-                                    replace(36, true)?;
-                                }
                                 let dialogue = dialogue
                                     .iter()
                                     .enumerate()

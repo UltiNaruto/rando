@@ -120,10 +120,10 @@ pub fn write_from_config(
         "pseudoregalia/Content/Blueprints/LevelActors/BP_SavePoint.uexp",
         include_bytes!("assets/BP_SavePoint.uexp"),
     )?;
-    if config.starting_room.0 != "gameStart" {
-        let (tag, spawn) = config.starting_room;
-        let mut savegame = extract(&config, &pak, "Blueprints/GameData/MVMain_Save.uasset")?;
-        if let Some(default) = savegame.asset_data.exports[1].get_normal_export_mut() {
+    let (tag, spawn) = config.starting_room;
+    let mut savegame = extract(&config, &pak, "Blueprints/GameData/MVMain_Save.uasset")?;
+    if let Some(default) = savegame.asset_data.exports[1].get_normal_export_mut() {
+        if config.starting_room.0 != "gameStart" {
             for prop in default
                 .properties
                 .iter_mut()
@@ -135,23 +135,46 @@ pub fn write_from_config(
                     _ => (),
                 })
             }
+
+            for prop in default
+                .properties
+                .iter_mut()
+                .filter_map(|prop| unreal_asset::cast!(Property, MapProperty, prop))
+            {
+                prop.get_name().get_content(|name| match name {
+                    "eventTracker" => {
+                        for (_, key, value) in prop.value.iter_mut() {
+                            let k = unreal_asset::cast!(Property, StrProperty, key).unwrap().clone();
+                            let v = unreal_asset::cast!(Property, IntProperty, value).unwrap();
+                            match k.value.unwrap().as_str() {
+                                "opening" => (*v).value = 1,
+                                _ => (),
+                            }
+                        }
+                    },
+                    _ => (),
+                })
+            }
         }
-        asset = std::io::Cursor::new(vec![]);
-        bulk = std::io::Cursor::new(vec![]);
-        savegame.write_data(&mut asset, Some(&mut bulk))?;
-        mod_pak.write_file(
-            "pseudoregalia/Content/Blueprints/GameData/MVMain_Save.uasset",
-            asset.into_inner(),
-        )?;
-        mod_pak.write_file(
-            "pseudoregalia/Content/Blueprints/GameData/MVMain_Save.uexp",
-            bulk.into_inner(),
-        )?;
-        let mut preset = open_slice(
-            include_bytes!("assets/rando.uasset").as_slice(),
-            include_bytes!("assets/rando.uexp"),
-        )?;
-        if let Export::DataTableExport(table) = &mut preset.asset_data.exports[0] {
+    }
+    asset = std::io::Cursor::new(vec![]);
+    bulk = std::io::Cursor::new(vec![]);
+    savegame.write_data(&mut asset, Some(&mut bulk))?;
+    mod_pak.write_file(
+        "pseudoregalia/Content/Blueprints/GameData/MVMain_Save.uasset",
+        asset.into_inner(),
+    )?;
+    mod_pak.write_file(
+        "pseudoregalia/Content/Blueprints/GameData/MVMain_Save.uexp",
+        bulk.into_inner(),
+    )?;
+    let mut preset = open_slice(
+        include_bytes!("assets/rando.uasset").as_slice(),
+        include_bytes!("assets/rando.uexp"),
+    )?;
+
+    if let Export::DataTableExport(table) = &mut preset.asset_data.exports[0] {
+        if config.starting_room.0 != "gameStart" {
             for prop in table.table.data[0]
                 .value
                 .iter_mut()
@@ -168,18 +191,18 @@ pub fn write_from_config(
                 })
             }
         }
-        asset = std::io::Cursor::new(vec![]);
-        bulk = std::io::Cursor::new(vec![]);
-        preset.write_data(&mut asset, Some(&mut bulk))?;
-        mod_pak.write_file(
-            "pseudoregalia/Content/Mods/PseudoMenuMod/GamePresets/rando.uasset",
-            asset.into_inner(),
-        )?;
-        mod_pak.write_file(
-            "pseudoregalia/Content/Mods/PseudoMenuMod/GamePresets/rando.uexp",
-            bulk.into_inner(),
-        )?;
     }
+    asset = std::io::Cursor::new(vec![]);
+    bulk = std::io::Cursor::new(vec![]);
+    preset.write_data(&mut asset, Some(&mut bulk))?;
+    mod_pak.write_file(
+        "pseudoregalia/Content/Mods/PseudoMenuMod/GamePresets/rando.uasset",
+        asset.into_inner(),
+    )?;
+    mod_pak.write_file(
+        "pseudoregalia/Content/Mods/PseudoMenuMod/GamePresets/rando.uexp",
+        bulk.into_inner(),
+    )?;
     if config.progressive_dream_breaker || config.progressive_slide {
         mod_pak.write_file(
             "pseudoregalia/Content/Blueprints/Progressive.uasset",
